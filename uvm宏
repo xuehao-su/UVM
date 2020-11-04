@@ -1,0 +1,38 @@
+派生自uvm_object的主要的类
+
+1. uvm_sequence_item transaction是由此派生，uvm_sequence_item又派生自uvm_object。uvm_sequence_item 是从uvm_transaction派生而来，所以自己写的transaction应该派生自uvm_sequence_item，从而可以使用新增的成员变量和任务。
+
+2. uvm_sequence:  所有的sequence要从uvm_sequence派生一个，sequence就是sequence_item的组合。driver向sequencer所有数据，sequencer检查是否有sequence要发送数据，发现有的话，会把sequence_item交给driver。
+
+3. config: 所有的config一般直接从uvm_object派生，config主要功能是规范验证平台的行为方式。比如规定driver在读取总线时地址信号要持续几个时钟，片选信号从何时开始有效等。config与config_db。这里的config指的是把所有参数放在一个object中，然后通过config_db的方式设置给所有需要这些参数的component。
+
+4. uvm_reg_item: 派生自uvm_sequence_item，用于寄存器模型中。
+
+5. uvm_reg_map, uvm_mem, uvm_reg_field, uvm_reg, uvm_reg_file, uvm_reg_block等与寄存器相关的众多类都是派生自uvm_object，都用于register model。
+
+6. uvm_phase: 他派生自uvm_object，主要作用为控制uvm_component的行为方式，使得uvm_component平滑的在各个phase之间运转。
+
+派生自uvm_component的主要的类
+
+1. uvm_driver, uvm_monitor, uvm_sequencer, uvm_scoreboard, reference model, uvm_agent, uvm_env, uvm_test, 所有的测试用例都要派生自uvm_test或者其派生类，任何一个派出的测试用例都要实例化env。
+
+与uvm_object相关的宏
+
+1. uvm_object_utils: 用于把一个直接或者间接派生自uvm_object的类注册到factory中。
+
+2. uvm_object_param_utils: 把一个直接或者间接派生自uvm_object的参数化的类注册到factory中，类似 class A#(int WIDTH=32) extends uvm_object;
+   参数化的类可以提高代码可重用性。
+3. uvm_object_utils_begin: 需要使用field automation机制时，使用此宏。
+
+4. uvm_object_param_utils_begin: 适用于参数化的并且其中某些成员变量要使用field_automation机制实现的类。
+
+与uvm_component相关的宏
+
+1. uvm_component_utils: 用于把一个直接或间接派生自uvm_component的类注册到factory中。
+
+2. uvm_component_param_utils: 用于把一个直接或间接派生自uvm_component的参数化的类注册到factory。
+
+3. uvm_component_utils_begin: 用于同时需要使用factory机制和field_automation机制注册的类。意义在于自动地使用config_db得到某些变量的值。
+
+4. uvm_component_param_utils_begin: 同理，适用于参数化的，并且某些成员变量要使用field_automation机制实现的类。
+
