@@ -36,3 +36,51 @@
 
 4. uvm_component_param_utils_begin: 同理，适用于参数化的，并且某些成员变量要使用field_automation机制实现的类。
 
+field automation系列宏
+
+1. `define uvm_field_int(ARG,FLAG)
+2. `define uvm_field_real(ARG,FLAG)
+3. `define uvm_field_enum(T,ARG,FLAG)
+4. `define uvm_field_object(ARG,FLAG)
+5. `define uvm_field_event(ARG,FLAG)
+6. `define uvm_field_string(ARG,FLAG)
+
+typedef enum {TB_TRUE, TB_FALSE} tb_bool_e;
+///code here
+tb_bool_e tb_flag;
+///code here
+`uvm_field_enum(tb_tool_e, tb_flag, UVM_ALL_ON)
+
+动态数组，静态数组，队列，联合数组系列宏，后边尝试使用
+`define uvm_field_array_enum(ARG, FLAG)
+`define uvm_field_array_int(ARG, FLAG)
+`define uvm_field_array_object(ARF, FLAG)
+`define uvm_field_array_string(ARG, FLAG)
+
+`define uvm_field_sarray_int(ARG, FLAG)
+`define uvm_field_sarray_enum(ARG, FLAG)
+`define uvm_field_sarray_object(ARG, FLAG)
+`define uvm_field_sarray_string(ARG, FLAG)
+
+`define uvm_field_queue_enum(ARG, FLAG)
+`define uvm_field_queue_int(ARG, FLAG)
+`define uvm_field_queue_object(ARG, FLAG)
+`define uvm_field_queue_string(ARG, FLAG)
+
+`define uvm_field_aa_int_string(ARG, FLAG)
+`define uvm_field_aa_string_string(ARG, FLAG)
+`define uvm_field_aa_object_string(ARG, FLAG)
+`define uvm_field_aa_int_int(ARG, FLAG)
+`define uvm_field_aa_int_int_unsigned(ARG, FLAG)
+`define uvm_field_aa_int_integer(ARG, FLAG)
+`define uvm_field_aa_int_integer_unsigned(ARG, FLAG)
+`define uvm_field_aa_int_byte(ARG, FLAG)
+`define uvm_field_aa_int_byte_unsigned(ARG, FLAG)
+`define uvm_field_aa_int_shortint(ARG, FLAG)
+`define uvm_field_aa_int_shortint_unsigned(ARG, FLAG)
+`define uvm_field_aa_int_longint(ARG, FLAG)
+`define uvm_field_aa_int_longint_unsigned(ARG, FLAG)
+`define uvm_field_aa_string_int(ARG, FLAG)
+`define uvm_field_aa_object_int(ARG, FLAG)
+
+
