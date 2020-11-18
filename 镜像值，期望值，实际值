@@ -1,0 +1,47 @@
+1. mirrored value
+ 表示当前硬件的已知状态值。镜像值往往由模型预测给出。在前门访问时通过观察总线或者在后门访问时通过自动预测等方式来给出镜像值。镜像值可能与硬件实际值不一致。
+ 例如状态寄存器的镜像值就无法与硬件实际值保持同步更新。另外如果其他访问寄存器的通路修改了寄存器，那可能由于那一路总线没被监测，导致寄存器未得到及时更新。
+2. desired value
+ 先利用寄存器模型修改软件对象值，然后利用该值更新硬件值。
+3. actual value
+ 对应硬件的真实数值。
+ 
+prediction的分类
+
+1. 自动预测
+没有在环境中集成独立的predictor，而是利用寄存器的操作来自动记录每一次寄存器的读写数值，并在后台自动调用predict（）方法的话，这种方式叫自动预测。
+简单有效。
+若出现一些其他sequence直接在总线层面上对寄存器进行操作，跳过寄存器级别的write或者read操作，或通过其他总线来访问寄存器等额外情况，无法自动得到寄存器的镜像值和预测值。
+
+2. 显示预测
+更为可靠的是在物理总线上通过监视器来捕捉总线事务，并传递给外部例化的预测器predictor，该预测器由UVM参数化类uvm_reg_predictor例化并集成在顶层环境中。
+
+显示预测对寄存器的数值预测更为准确。
+
+predictor在顶层中的集成，例子与要素
+class mcdf_bus_env extends uvm_env;
+
+  mcdf_bus_agent agent;
+  mcdf_rgm rgm;
+  reg2mcdf_adapter reg2mcdf;
+  uvm_reg_predictor #(mcdf_bus_trans) mcdf2reg_predictor;
+  `uvm_component_utils(mcdf_bus_env)
+  
+  function void build_phase(uvm_phase phase);
+    agent = mcdf_bus_agent::type_id::create("agent", this);
+    if(!uvm_config_db#(mcdf_rgm)::get(this, "", "rgm", rgm)) begin
+      `uvm_info("GETRGM", "no top down rgm handle is assgined", UVM_LOW)
+      rgm = mcdf_rgm::type_id::create("rgm", this);
+      `uvm_info("NEWRGM", "created rgm instance locally", UVM_LOW)
+    end
+    rgm.build();
+    reg2mcdf = reg2mcdf_adapter::type_id::create("reg2mcdf");
+    mcdf2reg_predictor = uvm_reg_predictor#(mcdf_bus_trans)::type_id::create("mcdf2reg_predictor", this);
+    mcdf2reg_predictor.map = rgm.map;
+    mcdf2reg_predictor.adapter = reg2mcdf;
+  endfunction
+  function void connect_phase(uvm_phase phase);
+    rgm.map.set_sequencer(agent.sequencer, reg2mcdf);
+    agent.monitor.ap.connect(mcdf2reg_predictor.bus_in);
+  endfunction
+endclass
