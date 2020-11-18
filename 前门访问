@@ -1,0 +1,89 @@
+class mcdf_example extends uvm_reg_sequence;
+  mcdf_rgm rgm;
+  `uvm_object_utils(mcdf_example_seq)
+  `uvm_declare_p_sequencer(mcdf_bus_sequencer)
+  
+  task body();
+    uvm_status_e status;
+    uvm_reg_data_t data;
+    
+    if(!uvm_config_db#(mcdf_rgm)::get(null, get_full_name(), "rgm", rgm)) begin
+      `uvm_error("GETRGM", "no top down rgm handle is assigned")
+    end
+    
+    rgm.chnl0_ctrl_reg.read(status, data, UVM_FRONTDOOR, .parent(this));
+    rgm.chnl0_ctrl_reg.write(status, 'h11, UVM_FRONTDOOR, .parent(this));
+    rgm.chnl0_ctrl_reg.read(status, data, UVM_FRONTDOOR, .parent(this));
+    
+    read_reg(rgm.chnl1_ctrl_reg, status, data, UVM_FRONTDOOR);
+    write_reg(rgm.chnl1_ctrl_reg, status, 'h22, UVM_FRONTDOOR);
+    read_reg(rgm.chnl1_ctrl_reg, status, data, UVM_FRONTDOOR);
+  endtask
+endclass
+
+class mcdf_rgm extends uvm_reg_block;
+  //寄存器成员和map声明
+  virtual function build();
+    //寄存器成员和map创建
+    //关联寄存器模型和hdl
+    add_hdl_path("reg_backdoor_access.dut");
+    chnl0_ctrl_reg.add_hdl_path_slice($sformatf("regs[%0d]", `SLV0_RW_REG), 0, 32);
+    chnl1_ctrl_reg.add_hdl_path_slice($sformatf("regs[%0d]", `SLV1_RW_REG), 0, 32);
+    chnl2_ctrl_reg.add_hdl_path_slice($sformatf("regs[%0d]", `SLV2_RW_REG), 0, 32);
+    chnl0_stat_reg.add_hdl_path_slice($sformatf("regs[%0d]", `SLV0_R_REG), 0, 32);
+    chnl1_stat_reg.add_hdl_path_slice($sformatf("regs[%0d]", `SLV1_R_REG), 0, 32);
+    chnl2_stat_reg.add_hdl_path_slice($sformatf("regs[%0d]", `SLV2_R_REG), 0, 32);
+    lock_model();
+  endfunction
+endclass
+
+class mcdf_example_seq extends uvm_reg_sequence;
+  mcdf_rgm rgm;
+  `uvm_object_utils(mcdf_example_seq)
+  `uvm_declare_p_sequencer(mcdf_bus_sequencer)
+  
+  task body();
+    uvm_status_e status;
+    uvm_reg_data_t data;
+    if(!uvm_config_db#(mcdf_rgm)::get(null, get_full_name(), "rgm", rgm))begin
+      `uvm_error("GETRGM", "no top down RGM handle is assigned")
+    end
+    
+    rgm.chnl0_ctrl_reg.read(status, data, UVM_BACKDOOR, .parent(this));
+    rgm.chnl0_ctrl_reg.write(status, 'h11, UVM_BACKDOOR, .parent(this));
+    rgm.chnl0_ctrl_reg.read(status, data, UVM_BACKDOOR, .parent(this));
+    
+    rgm.chnl1_ctrl_reg.peek(status, data, .parent(this));
+    rgm.chnl1_ctrl_reg.poke(status, 'h22, .parent(this));
+    rgm.chnl1_ctrl_reg.peek(status, data, .parent(this));
+    
+    read_reg(rgm.chnl2_ctrl_reg, status, data, UVM_BACKDOOR);
+    write_reg(rgm.chnl2_ctrl_reg, status, 'h22, UVM_BACKDOOR);
+    read_reg(rgm.chnl2_ctrl_reg, status, data, UVM_BACKDOOR);
+    
+    peek_reg(rgm.chnl2_ctrl_reg, status, data);
+    poke_reg(rgm.chnl2_ctrl_reg, status, 'h33);
+    peek_reg(rgm.chnl2_ctrl_reg, status, data);
+    
+  endtask
+endclass
+
+前门访问：
+1. 通过总线协议访问需要耗时，在总线访问结束时才能结束前门访问。
+2. 一般独写只能按字word读写，无法直接读写寄存器域。
+3. 依靠监测总线对寄存器模型做预测。
+4. 正确反映了时序关系。
+5. 不受总线时序功能影响。
+后门访问：
+1. 通过UVM DPI 关联硬件寄存器信号路径，直接读取或修改硬件，不需要访问时间，零时刻响应。
+2. 可以对寄存器或寄存器域直接读写。
+3. 依靠auto predicting 方式自动对寄存器内容做预测。
+4. 不受硬件时序控制，对硬件做的后门访问可能发生时序冲突。
+5. 通过总线协议，可以有效捕捉总线错误，继而验证总线访问路径。
+
+前后门访问使用技巧
+1. 先做前门访问。验证物理通路是否正常，专门的寄存器测试的前门访问序列来遍历所有的寄存器。前门访问被验证充分后可以用后门访问节省访问多个寄存器的时间。
+2. 若DUT实现了一些特殊的寄存器，例如只能写一次的寄存器，建议物理方式去访问确保反映真实的硬件行为。
+3. 寄存器随机设置的关键在于测试日常不可预期的场景。先后门访问随机化整个寄存器列表，再通过前门访问来配置寄存器，模拟无法预期的硬件配置场景。
+4. 对于地址映射到错误寄存器的问题，比如A本为0x10，B为0x20，实现中弄反了，先读后写无法发现此类错误，可以通过前门配置，后门访问判断值是否改变，再前门读取的方式来进行测试。
+5. 
